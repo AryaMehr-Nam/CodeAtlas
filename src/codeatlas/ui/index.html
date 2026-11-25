@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="obsidian">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeAtlas Architecture Studio</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="layouts.js" defer></script>
+  <script src="canvas_engine.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="studio-shell" id="studio-shell">
+    <div class="workspace-body" id="workspace-body">
+      <aside class="explorer-sidebar hidden" id="explorer-sidebar" aria-label="Architecture explorer">
+        <div class="explorer-header">
+          <div class="explorer-title-row">
+            <div class="explorer-title-wrap">
+              <h2 class="explorer-title">Architecture Explorer</h2>
+              <span class="explorer-count-badge" id="explorer-total-count">0</span>
+            </div>
+            <button type="button" class="hud-btn icon-only-btn" id="explorer-close-btn" title="Collapse explorer (E)" aria-label="Collapse architecture explorer">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+          </div>
+
+          <div class="explorer-presets" id="explorer-presets" role="group" aria-label="Quick focus presets">
+            <button type="button" class="preset-chip is-active" data-preset="all" aria-pressed="true">All</button>
+            <button type="button" class="preset-chip" data-preset="core" aria-pressed="false">Core App</button>
+            <button type="button" class="preset-chip" data-preset="issues" aria-pressed="false">Issues</button>
+            <button type="button" class="preset-chip" data-preset="routes" aria-pressed="false">Routes &amp; Flow</button>
+          </div>
+
+          <div class="explorer-search-wrap">
+            <svg class="explorer-search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="20" y1="20" x2="16.2" y2="16.2"></line>
+            </svg>
+            <input type="search" class="explorer-filter-input" id="explorer-filter-input" placeholder="Filter modules or routes..." autocomplete="off" spellcheck="false" aria-label="Filter modules or routes">
+          </div>
+
+          <div class="explorer-tabs" id="explorer-tabs" role="tablist" aria-label="Explorer sections">
+            <button type="button" class="explorer-tab is-active" role="tab" id="explorer-tab-btn-folders" data-explorer-tab="folders" aria-selected="true" aria-controls="explorer-panel-folders">
+              <span>Folders</span>
+              <span class="tab-count" id="explorer-count-folders">0</span>
+            </button>
+            <button type="button" class="explorer-tab" role="tab" id="explorer-tab-btn-routes" data-explorer-tab="routes" aria-selected="false" aria-controls="explorer-panel-routes">
+              <span>Routes</span>
+              <span class="tab-count" id="explorer-count-routes">0</span>
+            </button>
+            <button type="button" class="explorer-tab" role="tab" id="explorer-tab-btn-hotspots" data-explorer-tab="hotspots" aria-selected="false" aria-controls="explorer-panel-hotspots">
+              <span>Hotspots</span>
+              <span class="tab-count" id="explorer-count-hotspots">0</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="explorer-body" id="explorer-body">
+          <section class="explorer-panel" id="explorer-panel-folders" role="tabpanel" aria-labelledby="explorer-tab-btn-folders"></section>
+          <section class="explorer-panel hidden" id="explorer-panel-routes" role="tabpanel" aria-labelledby="explorer-tab-btn-routes"></section>
+          <section class="explorer-panel hidden" id="explorer-panel-hotspots" role="tabpanel" aria-labelledby="explorer-tab-btn-hotspots"></section>
+        </div>
+      </aside>
+
+      <main class="canvas-stage" id="canvas-stage" aria-label="Interactive architecture dependency canvas">
+        <canvas class="atlas-canvas" id="atlas-canvas"></canvas>
+
+        <div class="hud-top-stack">
+          <header class="hud-top" aria-label="Architecture studio controls">
+            <div class="hud-cluster hud-brand-cluster">
+              <button type="button" class="hud-btn explorer-toggle-btn" id="explorer-toggle-btn" aria-expanded="false" aria-controls="explorer-sidebar" title="Toggle Architecture Explorer (E)">
+                <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                  <line x1="9" y1="3" x2="9" y2="21"></line>
+                </svg>
+                <span class="btn-label-hide-sm">Explorer</span>
+                <kbd class="key-hint">E</kbd>
+              </button>
+              <div class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 21 7 12 12 3 7 12 2"></polygon>
+                  <polyline points="3 12 12 17 21 12"></polyline>
+                  <polyline points="3 17 12 22 21 17"></polyline>
+                </svg>
+              </div>
+              <div class="brand-identity">
+                <span class="brand-name">CodeAtlas</span>
+                <span class="repo-badge" id="repo-name">Loading repository</span>
+              </div>
+              <span class="watch-badge" id="watch-badge" role="status" aria-live="polite">
+                <span class="watch-dot" aria-hidden="true"></span>
+                <span id="watch-label">Connecting</span>
+              </span>
+            </div>
+
+            <div class="hud-cluster hud-center-controls">
+              <div class="view-mode-switch" role="group" aria-label="Graph granularity view mode">
+                <button type="button" class="hud-btn view-mode-btn" id="view-mode-overview" data-view-mode="overview" aria-pressed="false" title="Macro cluster overview (V)">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="3" width="8" height="8" rx="1.5"></rect>
+                    <rect x="13" y="3" width="8" height="8" rx="1.5"></rect>
+                    <rect x="3" y="13" width="8" height="8" rx="1.5"></rect>
+                    <rect x="13" y="13" width="8" height="8" rx="1.5"></rect>
+                  </svg>
+                  <span>Overview</span>
+                </button>
+                <button type="button" class="hud-btn view-mode-btn is-active" id="view-mode-modules" data-view-mode="modules" aria-pressed="true" title="Individual modules view (V)">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="6.5" cy="7" r="2.5"></circle>
+                    <circle cx="17.5" cy="7" r="2.5"></circle>
+                    <circle cx="12" cy="17" r="2.5"></circle>
+                    <line x1="8.7" y1="8.5" x2="10.8" y2="14.7"></line>
+                    <line x1="15.3" y1="8.5" x2="13.2" y2="14.7"></line>
+                  </svg>
+                  <span>Modules</span>
+                </button>
+              </div>
+
+              <nav class="hud-cluster hud-layouts" aria-label="Graph layout modes">
+                <button type="button" class="hud-btn layout-btn is-active" data-layout="layers" aria-pressed="true" title="Layered swimlanes (1)">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="4" height="16" rx="1"></rect>
+                    <rect x="10" y="4" width="4" height="16" rx="1"></rect>
+                    <rect x="17" y="4" width="4" height="16" rx="1"></rect>
+                  </svg>
+                  <span>Layers</span>
+                  <kbd class="key-hint">1</kbd>
+                </button>
+                <button type="button" class="hud-btn layout-btn" data-layout="constellation" aria-pressed="false" title="Cluster constellation (2)">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="7" cy="7" r="2.5"></circle>
+                    <circle cx="17" cy="6" r="2.5"></circle>
+                    <circle cx="16" cy="17" r="2.5"></circle>
+                    <circle cx="6" cy="16" r="2.5"></circle>
+                    <line x1="9" y1="8.5" x2="14.5" y2="15.5"></line>
+                    <line x1="9.5" y1="6.8" x2="14.5" y2="6.2"></line>
+                    <line x1="6.7" y1="9.5" x2="6.2" y2="13.5"></line>
+                  </svg>
+                  <span>Constellation</span>
+                  <kbd class="key-hint">2</kbd>
+                </button>
+                <button type="button" class="hud-btn layout-btn" data-layout="blast" aria-pressed="false" title="Radial blast radius (3)">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="2.5"></circle>
+                    <circle cx="12" cy="12" r="6.5" stroke-dasharray="3 2"></circle>
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="2 3"></circle>
+                  </svg>
+                  <span>Blast</span>
+                  <kbd class="key-hint">3</kbd>
+                </button>
+                <button type="button" class="hud-btn layout-btn" data-layout="health" aria-pressed="false" title="Health and hotspots (4)">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="22 12 18 12 15 20 9 4 6 12 2 12"></polyline>
+                  </svg>
+                  <span>Health</span>
+                  <kbd class="key-hint">4</kbd>
+                </button>
+              </nav>
+            </div>
+
+            <div class="hud-cluster hud-actions">
+              <button type="button" class="health-ring-btn" id="health-ring-btn" title="View architectural health diagnostics">
+                <svg class="health-ring-svg" viewBox="0 0 44 44" width="34" height="34" aria-hidden="true">
+                  <circle class="health-ring-track" cx="22" cy="22" r="17" fill="none" stroke-width="3.5"></circle>
+                  <circle class="health-ring-arc" id="health-ring-arc" cx="22" cy="22" r="17" fill="none" stroke-width="3.5" stroke-linecap="round"></circle>
+                </svg>
+                <span class="health-ring-meta">
+                  <span class="health-score-num" id="health-score-num">--</span>
+                  <span class="health-grade-tag" id="health-grade-tag">-</span>
+                </span>
+              </button>
+
+              <button type="button" class="hud-btn search-trigger" id="search-trigger" title="Search files, symbols, routes, smells (Ctrl+K or /)">
+                <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7"></circle>
+                  <line x1="20" y1="20" x2="16.2" y2="16.2"></line>
+                </svg>
+                <span class="btn-label-hide-sm">Search</span>
+                <kbd class="key-hint">Ctrl+K</kbd>
+              </button>
+
+              <button type="button" class="hud-btn icon-only-btn" id="theme-toggle-btn" title="Toggle theme (T)" aria-label="Toggle Obsidian and Paper theme">
+                <svg class="btn-icon icon-sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <line x1="12" y1="2" x2="12" y2="4"></line>
+                  <line x1="12" y1="20" x2="12" y2="22"></line>
+                  <line x1="4.93" y1="4.93" x2="6.34" y2="6.34"></line>
+                  <line x1="17.66" y1="17.66" x2="19.07" y2="19.07"></line>
+                  <line x1="2" y1="12" x2="4" y2="12"></line>
+                  <line x1="20" y1="12" x2="22" y2="12"></line>
+                  <line x1="4.93" y1="19.07" x2="6.34" y2="17.66"></line>
+                  <line x1="17.66" y1="6.34" x2="19.07" y2="4.93"></line>
+                </svg>
+                <svg class="btn-icon icon-moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+              </button>
+
+              <button type="button" class="hud-btn icon-only-btn" id="rescan-btn" title="Rescan repository" aria-label="Rescan repository">
+                <svg class="btn-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
+              </button>
+
+              <div class="export-dropdown-wrap" id="export-dropdown-wrap">
+                <button type="button" class="hud-btn export-trigger" id="export-trigger" aria-haspopup="menu" aria-expanded="false" aria-controls="export-menu">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>Export</span>
+                  <svg class="btn-icon chevron-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <div class="export-menu hidden" id="export-menu" role="menu" aria-label="Export architecture outputs"></div>
+              </div>
+            </div>
+          </header>
+
+          <div class="hud-filter-bar" aria-label="Layer filters and canvas toggles">
+            <div class="layer-pills" id="layer-pills" role="group" aria-label="Filter by architectural layer"></div>
+            <div class="filter-divider" aria-hidden="true"></div>
+            <div class="canvas-toggles" role="group" aria-label="Visual display toggles">
+              <button type="button" class="toggle-chip is-active" id="toggle-tests-btn" aria-pressed="true">
+                <span class="chip-indicator" aria-hidden="true"></span>
+                <span>Show Tests</span>
+              </button>
+              <button type="button" class="toggle-chip" id="toggle-cycles-btn" aria-pressed="false">
+                <span class="chip-indicator chip-indicator-danger" aria-hidden="true"></span>
+                <span>Show Cycles</span>
+              </button>
+              <button type="button" class="toggle-chip is-active" id="toggle-particles-btn" aria-pressed="true">
+                <span class="chip-indicator chip-indicator-accent" aria-hidden="true"></span>
+                <span>Particles</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="drill-breadcrumb-bar hidden" id="drill-breadcrumb-bar" aria-label="Cluster drilldown navigation">
+            <button type="button" class="breadcrumb-link" id="breadcrumb-all-btn">
+              <span id="breadcrumb-all-label">All Clusters</span>
+            </button>
+            <span class="breadcrumb-sep" aria-hidden="true">&gt;</span>
+            <span class="breadcrumb-current" id="breadcrumb-current-label"></span>
+            <span class="breadcrumb-count" id="breadcrumb-file-count">0 files</span>
+            <div class="breadcrumb-actions">
+              <button type="button" class="toggle-chip" id="breadcrumb-neighbors-btn" aria-pressed="false" title="Include 1-hop external neighbors">
+                <span class="chip-indicator chip-indicator-accent" aria-hidden="true"></span>
+                <span>+ Neighbors</span>
+              </button>
+              <button type="button" class="hud-btn breadcrumb-back-btn" id="breadcrumb-back-btn">
+                <svg class="btn-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                <span>Back to Overview</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="active-mode-banner hidden" id="active-mode-banner" role="status">
+            <span class="mode-banner-badge" id="mode-banner-badge"></span>
+            <span class="mode-banner-text" id="mode-banner-text"></span>
+            <button type="button" class="mode-banner-clear" id="mode-banner-clear">
+              <span>Clear</span>
+              <kbd class="key-hint">Esc</kbd>
+            </button>
+          </div>
+        </div>
+
+        <div class="canvas-tooltip hidden" id="canvas-tooltip" role="tooltip"></div>
+
+        <div class="hud-bottom-left">
+          <div class="zoom-controls" role="group" aria-label="Viewport zoom controls">
+            <button type="button" class="hud-btn icon-only-btn" id="zoom-in-btn" title="Zoom in" aria-label="Zoom in">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <button type="button" class="hud-btn icon-only-btn" id="zoom-out-btn" title="Zoom out" aria-label="Zoom out">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <button type="button" class="hud-btn fit-btn" id="fit-view-btn" title="Fit graph to view (F)">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+              <span>Fit</span>
+              <kbd class="key-hint">F</kbd>
+            </button>
+          </div>
+
+          <div class="stats-pill" id="canvas-stats-pill" aria-live="polite">
+            <span class="stat-pair"><strong id="stat-nodes">0</strong><span id="stat-nodes-label">modules</span></span>
+            <span class="stat-pair"><strong id="stat-edges">0</strong><span>edges</span></span>
+            <span class="stat-pair"><strong id="stat-cycles">0</strong><span>cycles</span></span>
+          </div>
+        </div>
+
+        <aside class="minimap-panel" id="minimap-panel" aria-label="Graph minimap navigation">
+          <div class="minimap-header">
+            <span class="minimap-title">Minimap</span>
+            <span class="minimap-zoom" id="minimap-zoom-label">100%</span>
+          </div>
+          <canvas class="minimap-canvas" id="minimap-canvas"></canvas>
+        </aside>
+
+        <div class="canvas-empty-state hidden" id="canvas-empty-state">
+          <p class="empty-title" id="empty-state-title">No modules match active filters</p>
+          <p class="empty-subtitle" id="empty-state-subtitle">Adjust layer pills or enable Show Tests to reveal modules.</p>
+          <button type="button" class="hud-btn" id="reset-filters-btn">Reset Filters</button>
+        </div>
+
+        <div class="toast-region" id="toast-region" aria-live="polite"></div>
+      </main>
+
+      <aside class="inspector-drawer hidden" id="inspector-drawer" aria-label="Module inspector">
+        <div class="inspector-header" id="inspector-header">
+          <div class="inspector-title-row">
+            <div class="inspector-title-block">
+              <h2 class="inspector-title" id="inspector-title">Inspector</h2>
+              <p class="inspector-path" id="inspector-path"></p>
+            </div>
+            <button type="button" class="hud-btn icon-only-btn" id="inspector-close-btn" title="Close inspector (Esc)" aria-label="Close inspector">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+          <div class="inspector-badges" id="inspector-badges"></div>
+          <div class="inspector-actions" id="inspector-actions">
+            <button type="button" class="hud-btn inspector-action-btn inspector-primary-btn hidden" id="action-drill-btn">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+                <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"></path>
+              </svg>
+              <span>Drill Into Cluster</span>
+            </button>
+            <button type="button" class="hud-btn inspector-action-btn" id="action-blast-btn">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <circle cx="12" cy="12" r="8"></circle>
+              </svg>
+              <span>Blast Radius</span>
+            </button>
+            <button type="button" class="hud-btn inspector-action-btn hidden" id="action-trace-btn">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="22 12 16 12 14 15 10 9 8 12 2 12"></polyline>
+              </svg>
+              <span>Trace Flow</span>
+            </button>
+            <button type="button" class="hud-btn inspector-action-btn" id="action-focus-btn">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M3 12h3m12 0h3M12 3v3m0 12v3"></path>
+              </svg>
+              <span>Center</span>
+            </button>
+          </div>
+          <div class="inspector-tabs" id="inspector-tabs" role="tablist" aria-label="Inspector views">
+            <button type="button" class="drawer-tab is-active" role="tab" id="tab-btn-overview" data-tab="overview" aria-selected="true" aria-controls="tab-panel-overview">Overview</button>
+            <button type="button" class="drawer-tab" role="tab" id="tab-btn-impact" data-tab="impact" aria-selected="false" aria-controls="tab-panel-impact">Impact</button>
+            <button type="button" class="drawer-tab" role="tab" id="tab-btn-symbols" data-tab="symbols" aria-selected="false" aria-controls="tab-panel-symbols">Symbols</button>
+            <button type="button" class="drawer-tab" role="tab" id="tab-btn-source" data-tab="source" aria-selected="false" aria-controls="tab-panel-source">Source</button>
+          </div>
+        </div>
+
+        <div class="inspector-body" id="inspector-body">
+          <section class="tab-panel" id="tab-panel-overview" role="tabpanel" aria-labelledby="tab-btn-overview"></section>
+          <section class="tab-panel hidden" id="tab-panel-impact" role="tabpanel" aria-labelledby="tab-btn-impact"></section>
+          <section class="tab-panel hidden" id="tab-panel-symbols" role="tabpanel" aria-labelledby="tab-btn-symbols"></section>
+          <section class="tab-panel hidden" id="tab-panel-source" role="tabpanel" aria-labelledby="tab-btn-source"></section>
+        </div>
+      </aside>
+    </div>
+
+    <div class="palette-backdrop hidden" id="palette-backdrop" role="dialog" aria-modal="true" aria-labelledby="palette-input">
+      <div class="palette-modal">
+        <div class="palette-search-row">
+          <svg class="palette-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="20" y1="20" x2="16.2" y2="16.2"></line>
+          </svg>
+          <input type="text" class="palette-input" id="palette-input" placeholder="Jump to module, symbol, route, or smell..." autocomplete="off" spellcheck="false" aria-label="Search architecture items">
+          <kbd class="key-hint">Esc</kbd>
+        </div>
+        <div class="palette-results" id="palette-results" role="listbox" aria-label="Search results"></div>
+        <div class="palette-footer">
+          <span class="palette-hint">Arrow keys to navigate</span>
+          <span class="palette-hint">Enter to inspect</span>
+          <span class="palette-hint">Esc to close</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

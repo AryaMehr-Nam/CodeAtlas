@@ -1,0 +1,29 @@
+services:
+  codeatlas:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: codeatlas:local
+    volumes:
+      - ./demo/sample_saas:/workspace:ro
+    security_opt:
+      - no-new-privileges:true
+    # Default command runs a read-only architectural scan inside the container.
+    #
+    # Note on `codeatlas serve`:
+    # CodeAtlas strictly enforces loopback-only binding (`127.0.0.1`, `localhost`, or `::1`
+    # via `validate_loopback_host`) and rejects `0.0.0.0`. Because Docker bridge port
+    # forwarding (`127.0.0.1:8770:8770`) routes traffic to a container's eth0 interface rather
+    # than its isolated loopback interface, bridge-forwarded `serve` cannot accept connections
+    # bound to container `127.0.0.1`.
+    #
+    # Options for launching the interactive Studio:
+    # 1. Run locally on your host loopback (recommended on macOS/Windows/Linux):
+    #      codeatlas demo
+    #      codeatlas serve ./demo/sample_saas --host 127.0.0.1 --port 8770 --watch
+    # 2. On Linux hosts, use host networking (remove any `ports:` block first):
+    #      network_mode: host
+    #      command: ["serve", "/workspace", "--host", "127.0.0.1", "--port", "8770", "--no-open"]
+    # 3. Export standalone offline HTML or AI context from the container:
+    #      docker compose run --rm -v ./out:/out codeatlas export /workspace --format html --output /out/atlas.html
+    command: ["scan", "/workspace"]
